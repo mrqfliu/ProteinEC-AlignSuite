@@ -8,6 +8,7 @@ A tool suite for batch structural (Foldseek) and sequence (Diamond) alignment of
 - [Usage](#usage)
   - [Foldseek Structural Alignment Pipeline](#foldseek-structural-alignment-pipeline)
   - [Diamond Sequence Alignment Pipeline](#diamond-sequence-alignment-pipeline)
+- [Directory Structure](#directory-structure)
 - [Output Description](#output-description)
 
 
@@ -30,89 +31,70 @@ pip install tqdm
 ```
 
 ### 3. Configure Paths (Critical Step)
-All input/output paths are preconfigured in the scripts. Before running, edit the following files to set your data paths:
-- `split_data_same_lables.py`: Set input CSV path and output EC-CSV directory.
-- `pdb_data_split.py`: Set paths for EC-CSV directory, raw PDB folder, and output EC database directory.
-- `foldseek_batch_create_db.py`: Set paths for EC database directory and Foldseek DB output directory.
-- `foldseek_library_compare.py`: Set paths for Foldseek DB directory and alignment output directory.
-- `csv_to_fasta.py`: Set input EC-CSV directory and output FASTA directory.
-- `build_diamond_dbs.sh`: Set input FASTA directory and Diamond DB output directory.
-- `diamond_compare_batch.py`: Set paths for FASTA directory, Diamond DB directory, and merged result path.
+Edit the following files to set your data paths:
+- **Main Script (Shared by Both Pipelines)**:
+  - `split_data_same_lables.py`: Set input CSV path and output EC-CSV directory.
+
+- **Foldseek Pipeline Scripts (in `foldseek/`)**:
+  - `pdb_data_split.py`: EC-CSV directory, raw PDB folder, output EC database directory.
+  - `foldseek_batch_create_db.py`: EC database directory, Foldseek DB output directory.
+  - `foldseek_library_compare.py`: Foldseek DB directory, alignment output directory.
+
+- **Diamond Pipeline Scripts (in `diamond/`)**:
+  - `csv_to_fasta.py`: Input EC-CSV directory, output FASTA directory.
+  - `build_diamond_dbs.sh`: Input FASTA directory, Diamond DB output directory.
+  - `diamond_compare_batch.py`: FASTA directory, Diamond DB directory, merged result path.
 
 
 ## Usage
 
 ### Foldseek Structural Alignment Pipeline
-Processes protein structures within the same EC class for structural similarity comparison.
-
-#### Step 1: Split CSV Files by EC Number
-Split the original protein dataset into EC-specific sub-files (paths preconfigured in script):
 ```bash
+# Step 1: Split CSV by EC number (run from main directory)
 python split_data_same_lables.py
-```
 
-
-#### Step 2: Organize PDB Files by EC Class
-Create symbolic links to group PDB files by EC number (paths preconfigured in script):
-```bash
-python pdb_data_split.py
-```
-
-
-#### Step 3: Build Foldseek Databases for Each EC Class
-Batch-create Foldseek structural databases (paths preconfigured in script):
-```bash
-python foldseek_batch_create_db.py
-```
-
-
-#### Step 4: Run Structural Alignment Within EC Classes
-Perform self-alignment for each EC database to compare structures (paths preconfigured in script):
-```bash
-python foldseek_library_compare.py
-```
-
-
-#### Step 5: Merge Alignment Results (Optional)
-Combine all EC alignment results into a single file:
-```bash
+# Step 2-5: Run Foldseek pipeline (run from main directory)
+python foldseek/pdb_data_split.py
+python foldseek/foldseek_batch_create_db.py
+python foldseek/foldseek_library_compare.py
 cat ./alignments/*/align.m8 > ./foldseek_merged_results.m8
 ```
 
 
 ### Diamond Sequence Alignment Pipeline
-Processes protein sequences within the same EC class for sequence similarity comparison.
-
-#### Step 1: Split CSV Files by EC Number (Reuse Foldseek Step 1)
-If you already ran the Foldseek pipeline, skip this step. Otherwise:
 ```bash
+# Step 1: Split CSV by EC number (run from main directory)
 python split_data_same_lables.py
+
+# Step 2-4: Run Diamond pipeline (run from main directory)
+python diamond/csv_to_fasta.py
+bash diamond/build_diamond_dbs.sh
+python diamond/diamond_compare_batch.py
 ```
 
 
-#### Step 2: Convert CSV Files to FASTA Format
-Convert EC-specific CSV files to FASTA sequences (paths preconfigured in script):
-```bash
-python csv_to_fasta.py
+## Directory Structure
 ```
-
-
-#### Step 3: Build Diamond Databases
-Batch-create Diamond sequence databases (paths preconfigured in script):
-```bash
-bash build_diamond_dbs.sh
-```
-
-
-#### Step 4: Run Sequence Alignment Within EC Classes
-Perform batch BLASTP alignment for each EC database (paths preconfigured in script):
-```bash
-python diamond_compare_batch.py
+ProteinEC-AlignSuite/
+├── split_data_same_lables.py          # Main script for EC splitting (shared)
+├── foldseek/                          # Foldseek pipeline scripts
+│   ├── pdb_data_split.py              # Organize PDB files by EC
+│   ├── foldseek_batch_create_db.py    # Build Foldseek databases
+│   ├── foldseek_library_compare.py    # Run Foldseek alignments
+|   └── alignments/                    # Foldseek alignment results
+└── diamond/                           # Diamond pipeline scripts
+    ├── csv_to_fasta.py                # Convert CSV to FASTA
+    ├── build_diamond_dbs.sh           # Build Diamond databases
+    ├── diamond_compare_batch.py       # Run Diamond alignments
+    └── ec_split_dataset_result/       # Diamond alignment results
 ```
 
 
 ## Output Description
-- **Foldseek Results**: Structural alignments are saved in `./alignments` (one subdirectory per EC class, each containing `align.m8` with fields like `alntmscore`, `lddt`, and `evalue`).
-- **Diamond Results**: Sequence alignments are merged into `./ec_split_dataset_result/all_results.m8` (fields include `qseqid`, `sseqid`, `pident`, and `evalue`).
+- **Foldseek Results**:  
+  Structural alignments are saved in `./alignments` (one subdirectory per EC class, containing `align.m8` with fields like `alntmscore`, `lddt`, `evalue`).
 
-All outputs use standard tab-separated (M8) format, compatible with downstream tools like pandas or R for analysis.
+- **Diamond Results**:  
+  Sequence alignments are merged into `./ec_split_dataset_result/all_results.m8` (fields include `qseqid`, `sseqid`, `pident`, `evalue`).
+
+All outputs use standard tab-separated (M8) format, compatible with pandas, R, or Excel for downstream analysis.
