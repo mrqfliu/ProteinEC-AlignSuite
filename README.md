@@ -16,7 +16,7 @@ A tool suite for batch structural (Foldseek) and sequence (Diamond) alignment of
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/ProteinEC-AlignSuite.git
+git clone https://github.com/mrqfliu/ProteinEC-AlignSuite.git
 cd ProteinEC-AlignSuite
 ```
 
